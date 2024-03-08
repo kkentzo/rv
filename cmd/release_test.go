@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kkentzo/rv/release"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Release_ShouldCreateResources_FromScratch(t *testing.T) {
@@ -19,8 +21,8 @@ func Test_Release_ShouldCreateResources_FromScratch(t *testing.T) {
 	defer os.RemoveAll(workspacePath)
 
 	// create and execute release
-	releaseId, err := createRelease(workspacePath, "foo.txt")
-	assert.NoError(t, err)
+	releaseId, err := createRelease(workspacePath, "foo.txt", 1)
+	require.NoError(t, err)
 
 	// the workspace should now be present
 	assert.DirExists(t, workspacePath)
@@ -29,9 +31,9 @@ func Test_Release_ShouldCreateResources_FromScratch(t *testing.T) {
 	// the release should have the correct contents
 	assert.FileExists(t, path.Join(workspacePath, releaseId, "foo.txt"))
 	// the workspace should contain the "current" release link
-	assert.FileExists(t, path.Join(workspacePath, "current"))
+	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName))
 	// the "current" release link should point to the release folder
-	assert.FileExists(t, path.Join(workspacePath, "current", "foo.txt"))
+	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "foo.txt"))
 }
 
 func Test_Release_ShouldCleanUp_WhenBundleDoesNotExist(t *testing.T) {
@@ -45,7 +47,7 @@ func Test_Release_ShouldCleanUp_WhenBundleDoesNotExist(t *testing.T) {
 	// prepare and execute command
 	RootCmd.SetArgs([]string{"release", "-w", workspacePath, bundlePath})
 	// FIRE!
-	RootCmd.Execute()
+	require.NoError(t, RootCmd.Execute())
 
 	// the workspace will not be cleared up
 	assert.DirExists(t, workspacePath)
@@ -54,7 +56,7 @@ func Test_Release_ShouldCleanUp_WhenBundleDoesNotExist(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, entries)
 	// the workspace should NOT contain the "current" release link
-	assert.NoFileExists(t, path.Join(workspacePath, "current"))
+	assert.NoFileExists(t, path.Join(workspacePath, release.CurrentLinkName))
 }
 
 func Test_Release_ShouldUpdateCurrent_WhenPreviousReleaseExists(t *testing.T) {
@@ -63,16 +65,39 @@ func Test_Release_ShouldUpdateCurrent_WhenPreviousReleaseExists(t *testing.T) {
 
 	// === create the first release ===
 	// create and execute release
-	releaseId, err := createRelease(workspacePath, "foo.txt")
-	assert.NoError(t, err)
+	releaseId, err := createRelease(workspacePath, "foo.txt", 2)
+	require.NoError(t, err)
 	assert.FileExists(t, path.Join(workspacePath, releaseId, "foo.txt"))
-	assert.FileExists(t, path.Join(workspacePath, "current", "foo.txt"))
+	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "foo.txt"))
 
 	time.Sleep(10 * time.Millisecond)
 
 	// === create the second release ===
-	releaseId, err = createRelease(workspacePath, "bar.txt")
-	assert.NoError(t, err)
+	releaseId, err = createRelease(workspacePath, "bar.txt", 2)
+	require.NoError(t, err)
 	assert.FileExists(t, path.Join(workspacePath, releaseId, "bar.txt"))
-	assert.FileExists(t, path.Join(workspacePath, "current", "bar.txt"))
+	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "bar.txt"))
+}
+
+func Test_Release_ShouldKeepNMostRecentReleases(t *testing.T) {
+	workspacePath := uuid.NewString()
+	defer os.RemoveAll(workspacePath)
+
+	// === create the first release ===
+	// create and execute release
+	releaseId1, err := createRelease(workspacePath, "foo.txt", 1)
+	require.NoError(t, err)
+	assert.FileExists(t, path.Join(workspacePath, releaseId1, "foo.txt"))
+	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "foo.txt"))
+
+	time.Sleep(10 * time.Millisecond)
+
+	// === create the second release ===
+	releaseId2, err := createRelease(workspacePath, "bar.txt", 1)
+	require.NoError(t, err)
+	assert.FileExists(t, path.Join(workspacePath, releaseId2, "bar.txt"))
+	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "bar.txt"))
+
+	// the first release should be gone now
+	assert.NoDirExists(t, path.Join(workspacePath, releaseId1))
 }

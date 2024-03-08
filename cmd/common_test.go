@@ -6,16 +6,16 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 
 	"github.com/google/uuid"
+	"github.com/kkentzo/rv/release"
 	"github.com/spf13/cobra"
 )
 
 // ================
 // HELPER FUNCTIONS
 // ================
-func createRelease(workspacePath, includedFile string) (string, error) {
+func createRelease(workspacePath, includedFile string, keepN uint) (string, error) {
 	// create bundle
 	bundlePath := fmt.Sprintf("%s.zip", uuid.NewString())
 	defer deleteBundle(bundlePath)
@@ -25,12 +25,14 @@ func createRelease(workspacePath, includedFile string) (string, error) {
 
 	// prepare command
 	cmdOutput := createOutputBuffer(RootCmd)
-	RootCmd.SetArgs([]string{"release", "-w", workspacePath, bundlePath})
+	RootCmd.SetArgs([]string{"release", "-w", workspacePath, "-k", fmt.Sprint(keepN), bundlePath})
 	// FIRE!
-	RootCmd.Execute()
+	if err := RootCmd.Execute(); err != nil {
+		return "", err
+	}
 
 	// get release ID from command output
-	return parseReleaseId(cmdOutput.String()), nil
+	return release.ReleaseFormatRe.FindString(cmdOutput.String()), nil
 }
 
 func createOutputBuffer(cmd *cobra.Command) *bytes.Buffer {
@@ -38,13 +40,6 @@ func createOutputBuffer(cmd *cobra.Command) *bytes.Buffer {
 	cmd.SetOut(actual)
 	cmd.SetErr(actual)
 	return actual
-}
-
-func parseReleaseId(cmdOutput string) string {
-	pattern := `\b\d{14}\.\d{3}\b`
-	// Compile the regular expression
-	re := regexp.MustCompile(pattern)
-	return re.FindString(cmdOutput)
 }
 
 func fileExists(filename string) bool {

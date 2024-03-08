@@ -4,41 +4,103 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
+	"sort"
 	"time"
 )
 
-func Install(workspaceDir, bundlePath string) (string, error) {
+const (
+	ReleaseFormat   = "20060102150405.000"
+	CurrentLinkName = "current"
+)
+
+var ReleaseFormatRe = regexp.MustCompile(`\b\d{14}\.\d{3}\b`)
+
+// Execute the release flow given a workspace directory and a zip file (bundle):
+// 1. creates the workspace if necessary
+// 2. creates the release directory inside the workspace
+// 3. decompresses the bundle into the release directory
+// 4. updates the workspace's `current` link to point to the new release
+// 5. applies the policy of how many releases to keep
+// The function returns the ID of the release (directory name) and/or an error
+// if the ID is not an empty string, then the release directory still exists (even on error) and can be used
+func Install(workspaceDir, bundlePath string, keepN uint) (string, error) {
+	// we will work with absolute directories
+	if !path.IsAbs(workspaceDir) {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return "", fmt.Errorf("failed to determine the current working directory: %v", err)
+		}
+		workspaceDir = path.Join(cwd, workspaceDir)
+
+	}
 	// create release under workspace
-	id := time.Now().Format("20060102150405.000")
+	id := time.Now().Format(ReleaseFormat)
 	releaseDir := path.Join(workspaceDir, id)
 	if err := os.MkdirAll(releaseDir, 0755); err != nil {
-		return id, fmt.Errorf("failed to create release: %v", err)
+		return "", fmt.Errorf("failed to create release: %v", err)
 	}
 	// decompress bundle file
 	if err := decompressZip(bundlePath, releaseDir); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
-		return id, fmt.Errorf("failed to decompress archive: %v", err)
+		return "", fmt.Errorf("failed to decompress archive: %v", err)
 	}
 	// update current link
 	if err := createOrUpdateLink(workspaceDir, id); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
-		return id, fmt.Errorf("failed to create/update link: %v", err)
+		return "", fmt.Errorf("failed to create/update link: %v", err)
+	}
+	// clean up excess releases
+	if err := cleanupReleases(workspaceDir, keepN); err != nil {
+		return id, fmt.Errorf("failed to clean up releases (keep=%d)", keepN)
 	}
 	return id, nil
 }
 
+func cleanupReleases(workspaceDir string, keepN uint) error {
+	entries, err := ioutil.ReadDir(workspaceDir)
+	if err != nil {
+		return err
+	}
+	// assemble all release file names (and only those)
+	releases := []string{}
+	for _, e := range entries {
+		if ReleaseFormatRe.Match([]byte(e.Name())) {
+			releases = append(releases, path.Join(workspaceDir, e.Name()))
+		}
+	}
+	obsoleteN := len(releases) - int(keepN)
+	if obsoleteN > 0 {
+		// sort releases in ascending order (oldest to newest)
+		sort.Slice(releases, func(i, j int) bool {
+			return releases[i] < releases[j]
+		})
+		for idx, releasePath := range releases {
+			if idx < obsoleteN {
+				if err := os.RemoveAll(releasePath); err != nil {
+					return fmt.Errorf("failed to delete release %s: %v", releasePath, err)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func createOrUpdateLink(workspaceDir, target string) error {
-	link := path.Join(workspaceDir, "current")
+	link := path.Join(workspaceDir, CurrentLinkName)
 	// does the link already exist?
 	_, err := os.Stat(link)
 	if !os.IsNotExist(err) {
 		os.Remove(link)
 	}
+	// TODO: what if the following fails? We are stuck with no `current` link
 	return os.Symlink(target, link)
 }
 
