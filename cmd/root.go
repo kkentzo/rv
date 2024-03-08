@@ -8,10 +8,10 @@ import (
 
 var (
 	// persistent (global) command-line arguments
-	rootDirectory string
+	workspacePath string
 	// command
-	rootCmdDescription = "Manage local releases"
-	rootCmd            = &cobra.Command{
+	rootCmdDescription = "Manage multiple release bundles locally"
+	RootCmd            = &cobra.Command{
 		Use:   "rv",
 		Short: rootCmdDescription,
 		Long:  rootCmdDescription,
@@ -21,14 +21,14 @@ var (
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	err := rootCmd.Execute()
+	err := RootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
 func init() {
-	rootCmd.PersistentFlags().
-		StringVarP(&rootDirectory, "workspace", "w", "", "directory under which releases will be located and managed")
-	rootCmd.MarkPersistentFlagRequired("workspace")
+	RootCmd.PersistentFlags().
+		StringVarP(&workspacePath, "workspace", "w", "", "directory that contains all available releases")
+	RootCmd.MarkPersistentFlagRequired("workspace")
 }
