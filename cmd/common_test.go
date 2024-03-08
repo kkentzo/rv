@@ -24,7 +24,7 @@ func createRelease(workspacePath, includedFile string, keepN uint) (string, erro
 
 	// prepare command
 	cmdOutput := createOutputBuffer(RootCmd)
-	RootCmd.SetArgs([]string{"release", "-w", workspacePath, "-k", fmt.Sprint(keepN), bundlePath})
+	RootCmd.SetArgs([]string{"release", "-w", workspacePath, "-k", fmt.Sprint(keepN), "-a", bundlePath})
 	// FIRE!
 	if err := RootCmd.Execute(); err != nil {
 		return "", err

@@ -10,16 +10,16 @@ import (
 // releaseCmd represents the release command
 var (
 	// command-line arguments
-	keepN uint
+	archivePath string
+	keepN       uint
 	// command
-	releaseCmdDescription = "Uncompress the specified bundle into the workspace and update the `current` link"
+	releaseCmdDescription = "Uncompress the specified archive into the workspace and update the `current` link"
 	ReleaseCmd            = &cobra.Command{
 		Use:   "release",
 		Short: releaseCmdDescription,
 		Long:  releaseCmdDescription,
-		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if releaseID, err := release.Install(workspacePath, args[0], keepN); err != nil {
+			if releaseID, err := release.Install(workspacePath, archivePath, keepN); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
 				fmt.Fprintln(cmd.OutOrStdout(), releaseID)
@@ -29,6 +29,8 @@ var (
 )
 
 func init() {
+	ReleaseCmd.Flags().StringVarP(&archivePath, "archive", "a", "", "path to archive file containing the release")
 	ReleaseCmd.Flags().UintVarP(&keepN, "keep", "k", 3, "maximum number of releases to keep in workspace at all times")
+	ReleaseCmd.MarkFlagRequired("archive")
 	RootCmd.AddCommand(ReleaseCmd)
 }
