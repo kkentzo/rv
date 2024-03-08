@@ -8,7 +8,6 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/kkentzo/rv/release"
 	"github.com/spf13/cobra"
 )
 
@@ -31,8 +30,19 @@ func createRelease(workspacePath, includedFile string, keepN uint) (string, erro
 		return "", err
 	}
 
-	// get release ID from command output
-	return release.ReleaseFormatRe.FindString(cmdOutput.String()), nil
+	return cmdOutput.String(), nil
+}
+
+func listReleases(workspacePath string) (string, error) {
+	// prepare command
+	cmdOutput := createOutputBuffer(RootCmd)
+	RootCmd.SetArgs([]string{"list", "-w", workspacePath})
+	// FIRE!
+	if err := RootCmd.Execute(); err != nil {
+		return "", err
+	}
+
+	return cmdOutput.String(), nil
 }
 
 func createOutputBuffer(cmd *cobra.Command) *bytes.Buffer {

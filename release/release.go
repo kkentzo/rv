@@ -63,26 +63,34 @@ func Install(workspaceDir, bundlePath string, keepN uint) (string, error) {
 	return id, nil
 }
 
+func List(workspaceDir string) ([]string, error) {
+	releases, err := getReleases(workspaceDir)
+	if err != nil {
+		return releases, fmt.Errorf("failed to list releases: %v", err)
+	}
+	// sort releases in descending order (oldest to newest)
+	sort.Slice(releases, func(i, j int) bool {
+		return releases[i] > releases[j]
+	})
+
+	return releases, nil
+}
+
 func cleanupReleases(workspaceDir string, keepN uint) error {
-	entries, err := ioutil.ReadDir(workspaceDir)
+	releases, err := getReleases(workspaceDir)
 	if err != nil {
 		return err
 	}
 	// assemble all release file names (and only those)
-	releases := []string{}
-	for _, e := range entries {
-		if ReleaseFormatRe.Match([]byte(e.Name())) {
-			releases = append(releases, path.Join(workspaceDir, e.Name()))
-		}
-	}
 	obsoleteN := len(releases) - int(keepN)
 	if obsoleteN > 0 {
 		// sort releases in ascending order (oldest to newest)
 		sort.Slice(releases, func(i, j int) bool {
 			return releases[i] < releases[j]
 		})
-		for idx, releasePath := range releases {
+		for idx, releaseName := range releases {
 			if idx < obsoleteN {
+				releasePath := path.Join(workspaceDir, releaseName)
 				if err := os.RemoveAll(releasePath); err != nil {
 					return fmt.Errorf("failed to delete release %s: %v", releasePath, err)
 				}
@@ -91,6 +99,23 @@ func cleanupReleases(workspaceDir string, keepN uint) error {
 	}
 
 	return nil
+}
+
+func getReleases(workspaceDir string) ([]string, error) {
+	releases := []string{}
+
+	entries, err := ioutil.ReadDir(workspaceDir)
+	if err != nil {
+		return releases, err
+	}
+
+	for _, e := range entries {
+		if ReleaseFormatRe.Match([]byte(e.Name())) {
+			releases = append(releases, e.Name())
+		}
+	}
+
+	return releases, nil
 }
 
 func createOrUpdateLink(workspaceDir, target string) error {
