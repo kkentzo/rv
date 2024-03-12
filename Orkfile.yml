@@ -1,0 +1,37 @@
+default: test
+
+tasks:
+
+  - name: build
+    description: build the application
+    env:
+      - GIT_COMMIT: $[bash -c "git rev-parse HEAD | cut -c-9"]$[bash -c "git diff --quiet || echo '-d'"]
+        APP_VERSION: $[bash -c "git describe --tags --abbrev=0 --always"]
+      - GOOS: linux
+        GOARCH: amd64
+        GO_TARGET: bin/rv
+    actions:
+      - >-
+        go build
+        -ldflags="-s -w -X github.com/kkentzo/rv/cmd.GitCommit=${GIT_COMMIT} -X github.com/kkentzo/rv/cmd.AppVersion=${APP_VERSION}"
+        -o ${GO_TARGET}
+
+  - name: test
+    description: test the application
+    actions:
+      - go test ./... -v -cover -count=1
+
+  - name: coverage
+    description: produce and display a test coverage report
+    env:
+      - COV_OUT: cov.out
+        COV_HTML: cov.html
+    actions:
+      - go test -coverprofile=$COV_OUT ./...
+      - go tool cover -html=$COV_OUT -o $COV_HTML
+    on_success:
+      - open $COV_HTML
+
+  - name: clean
+    actions:
+      - rm -rf bin

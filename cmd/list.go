@@ -15,7 +15,7 @@ var (
 		Short: listCmdDescription,
 		Long:  listCmdDescription,
 		Run: func(cmd *cobra.Command, args []string) {
-			if releases, err := release.List(workspacePath); err != nil {
+			if releases, err := release.List(globalWorkspacePath); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
 				for _, rel := range releases {
@@ -27,5 +27,6 @@ var (
 )
 
 func init() {
+	requireWorkspaceFlag(ListCmd)
 	RootCmd.AddCommand(ListCmd)
 }

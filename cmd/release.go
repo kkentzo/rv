@@ -19,7 +19,7 @@ var (
 		Short: releaseCmdDescription,
 		Long:  releaseCmdDescription,
 		Run: func(cmd *cobra.Command, args []string) {
-			if releaseID, err := release.Install(workspacePath, archivePath, keepN); err != nil {
+			if releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
 				fmt.Fprintln(cmd.OutOrStdout(), releaseID)
@@ -29,8 +29,11 @@ var (
 )
 
 func init() {
+	requireWorkspaceFlag(ReleaseCmd)
+
 	ReleaseCmd.Flags().StringVarP(&archivePath, "archive", "a", "", "path to archive file containing the release")
 	ReleaseCmd.Flags().UintVarP(&keepN, "keep", "k", 3, "maximum number of releases to keep in workspace at all times")
 	ReleaseCmd.MarkFlagRequired("archive")
+
 	RootCmd.AddCommand(ReleaseCmd)
 }

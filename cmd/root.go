@@ -8,7 +8,8 @@ import (
 
 var (
 	// persistent (global) command-line arguments
-	workspacePath string
+	// each command that needs it, sets the flag and uses this variable
+	globalWorkspacePath string
 	// command
 	rootCmdDescription = "Manage multiple release bundles locally"
 	RootCmd            = &cobra.Command{
@@ -27,8 +28,7 @@ func Execute() {
 	}
 }
 
-func init() {
-	RootCmd.PersistentFlags().
-		StringVarP(&workspacePath, "workspace", "w", "", "directory that contains all available releases")
-	RootCmd.MarkPersistentFlagRequired("workspace")
+func requireWorkspaceFlag(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&globalWorkspacePath, "workspace", "w", "", "directory that contains all available releases")
+	cmd.MarkFlagRequired("workspace")
 }
