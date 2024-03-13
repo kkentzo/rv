@@ -1,0 +1,25 @@
+project_name: rv
+builds:
+  - env: [CGO_ENABLED=0]
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w -X github.com/kkentzo/rv/cmd.GitCommit={{.Env.GITHUB_SHA}} -X github.com/kkentzo/rv/cmd.AppVersion={{.Env.GITHUB_REF_NAME}}
+
+nfpms:
+  -
+    vendor: Kyriakos Kentzoglanakis
+    license: MIT
+    homepage: https://github.com/kkentzo/rv
+    maintainer: kkentzo @ github
+    description: |-
+      Tool for managing multiple release versions locally
+    formats:
+      - apk
+      - deb
+      - rpm
