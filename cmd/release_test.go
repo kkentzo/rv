@@ -22,7 +22,7 @@ func Test_Release_ShouldCreateResources_FromScratch(t *testing.T) {
 
 	// create and execute release
 	out, err := createRelease(workspacePath, "foo.txt", 1)
-	releaseId := release.ReleaseFormatRe.FindString(out)
+	releaseId := parseReleaseFromOutput(out)
 	require.NoError(t, err)
 
 	// the workspace should now be present
@@ -67,7 +67,7 @@ func Test_Release_ShouldUpdateCurrent_WhenPreviousReleaseExists(t *testing.T) {
 	// === create the first release ===
 	// create and execute release
 	out, err := createRelease(workspacePath, "foo.txt", 2)
-	releaseId := release.ReleaseFormatRe.FindString(out)
+	releaseId := parseReleaseFromOutput(out)
 
 	require.NoError(t, err)
 	assert.FileExists(t, path.Join(workspacePath, releaseId, "foo.txt"))
@@ -77,7 +77,7 @@ func Test_Release_ShouldUpdateCurrent_WhenPreviousReleaseExists(t *testing.T) {
 
 	// === create the second release ===
 	out, err = createRelease(workspacePath, "bar.txt", 2)
-	releaseId = release.ReleaseFormatRe.FindString(out)
+	releaseId = parseReleaseFromOutput(out)
 	require.NoError(t, err)
 	assert.FileExists(t, path.Join(workspacePath, releaseId, "bar.txt"))
 	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "bar.txt"))
@@ -90,7 +90,7 @@ func Test_Release_ShouldKeepNMostRecentReleases(t *testing.T) {
 	// === create the first release ===
 	// create and execute release
 	out, err := createRelease(workspacePath, "foo.txt", 1)
-	releaseId1 := release.ReleaseFormatRe.FindString(out)
+	releaseId1 := parseReleaseFromOutput(out)
 
 	require.NoError(t, err)
 	assert.FileExists(t, path.Join(workspacePath, releaseId1, "foo.txt"))
@@ -100,7 +100,7 @@ func Test_Release_ShouldKeepNMostRecentReleases(t *testing.T) {
 
 	// === create the second release ===
 	out, err = createRelease(workspacePath, "bar.txt", 1)
-	releaseId2 := release.ReleaseFormatRe.FindString(out)
+	releaseId2 := parseReleaseFromOutput(out)
 	require.NoError(t, err)
 	assert.FileExists(t, path.Join(workspacePath, releaseId2, "bar.txt"))
 	assert.FileExists(t, path.Join(workspacePath, release.CurrentLinkName, "bar.txt"))

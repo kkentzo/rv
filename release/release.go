@@ -29,7 +29,7 @@ var ReleaseFormatRe = regexp.MustCompile(`\b\d{14}\.\d{3}\b`)
 // 5. applies the policy of how many releases to keep
 // The function returns the ID of the release (directory name) and/or an error
 // if the ID is not an empty string, then the release directory still exists (even on error) and can be used
-func Install(workspaceDir, bundlePath string, keepN uint) (string, error) {
+func Install(workspaceDir, bundlePath string, keepN uint, stdout io.Writer) (string, error) {
 	// we should not accept this value because
 	// it will leave us with no releases at all
 	if keepN == 0 {
@@ -44,6 +44,8 @@ func Install(workspaceDir, bundlePath string, keepN uint) (string, error) {
 		workspaceDir = path.Join(cwd, workspaceDir)
 
 	}
+	fmt.Fprintf(stdout, "[info] workspace=%s\n", workspaceDir)
+
 	// create release under workspace
 	id := time.Now().Format(ReleaseFormat)
 	releaseDir := path.Join(workspaceDir, id)
@@ -56,14 +58,16 @@ func Install(workspaceDir, bundlePath string, keepN uint) (string, error) {
 		defer os.RemoveAll(releaseDir)
 		return "", fmt.Errorf("failed to decompress archive: %v", err)
 	}
+	fmt.Fprintf(stdout, "[info] bundle=%s\n", bundlePath)
 	// update current link
 	if err := createOrUpdateLink(workspaceDir, id); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
 		return "", fmt.Errorf("failed to create/update link: %v", err)
 	}
+	fmt.Fprintf(stdout, "[release] current=%s\n", id)
 	// clean up excess releases
-	if err := cleanupReleases(workspaceDir, keepN); err != nil {
+	if err := cleanupReleases(workspaceDir, keepN, stdout); err != nil {
 		return id, fmt.Errorf("failed to clean up releases (keep=%d)", keepN)
 	}
 	return id, nil
@@ -82,7 +86,7 @@ func List(workspaceDir string) ([]string, error) {
 	return releases, nil
 }
 
-func cleanupReleases(workspaceDir string, keepN uint) error {
+func cleanupReleases(workspaceDir string, keepN uint, stdout io.Writer) error {
 	releases, err := getReleases(workspaceDir)
 	if err != nil {
 		return err
@@ -100,6 +104,7 @@ func cleanupReleases(workspaceDir string, keepN uint) error {
 				if err := os.RemoveAll(releasePath); err != nil {
 					return fmt.Errorf("failed to delete release %s: %v", releasePath, err)
 				}
+				fmt.Fprintf(stdout, "[cleanup] deleted %s (keep=%d)\n", releaseName, keepN)
 			}
 		}
 	}

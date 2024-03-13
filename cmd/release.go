@@ -26,10 +26,10 @@ var (
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			if releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN); err != nil {
+			if releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN, cmd.OutOrStdout()); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
-				fmt.Fprintln(cmd.OutOrStdout(), releaseID)
+				fmt.Fprintf(cmd.OutOrStdout(), "[info] finished %s\n", releaseID)
 			}
 		},
 	}
