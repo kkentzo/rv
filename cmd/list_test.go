@@ -36,5 +36,5 @@ func Test_List_ShouldListAllReleases(t *testing.T) {
 
 	list, err := listReleases(workspacePath)
 	require.NoError(t, err)
-	assert.Equal(t, fmt.Sprintf("%s\n%s\n", releaseId2, releaseId1), list)
+	assert.Equal(t, fmt.Sprintf("%s <== current\n%s\n", releaseId2, releaseId1), list)
 }

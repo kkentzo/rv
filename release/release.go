@@ -82,6 +82,16 @@ func List(workspaceDir string) ([]string, error) {
 	sort.Slice(releases, func(i, j int) bool {
 		return releases[i] > releases[j]
 	})
+	current, err := os.Readlink(path.Join(workspaceDir, "current"))
+	if err != nil {
+		return releases, fmt.Errorf("failed to resolve current release: %v", err)
+	}
+	// mark current release
+	for idx, rel := range releases {
+		if rel == current {
+			releases[idx] = rel + " <== current"
+		}
+	}
 
 	return releases, nil
 }
