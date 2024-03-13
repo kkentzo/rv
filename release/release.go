@@ -143,11 +143,6 @@ func decompressZip(zipFile, targetDir string) error {
 	}
 	defer r.Close()
 
-	// Create the target directory if it doesn't exist
-	if err := os.MkdirAll(targetDir, 0755); err != nil {
-		return err
-	}
-
 	// Iterate through each file in the archive
 	for _, file := range r.File {
 		// Open the file inside the zip archive
