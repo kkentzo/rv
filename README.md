@@ -1,4 +1,5 @@
 [![test](https://github.com/kkentzo/rv/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/kkentzo/rv/actions/workflows/test.yml)
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/kkentzo/rv)
 
 # rv
 
