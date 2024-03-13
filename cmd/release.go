@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/kkentzo/rv/release"
@@ -18,6 +19,12 @@ var (
 		Use:   "release",
 		Short: releaseCmdDescription,
 		Long:  releaseCmdDescription,
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			if keepN == 0 {
+				return errors.New("zero is not a valid value for --keep (-k) flag")
+			}
+			return nil
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)

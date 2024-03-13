@@ -2,6 +2,7 @@ package release
 
 import (
 	"archive/zip"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,6 +30,11 @@ var ReleaseFormatRe = regexp.MustCompile(`\b\d{14}\.\d{3}\b`)
 // The function returns the ID of the release (directory name) and/or an error
 // if the ID is not an empty string, then the release directory still exists (even on error) and can be used
 func Install(workspaceDir, bundlePath string, keepN uint) (string, error) {
+	// we should not accept this value because
+	// it will leave us with no releases at all
+	if keepN == 0 {
+		return "", errors.New("can not accept keeping no releases in the workspace")
+	}
 	// we will work with absolute directories
 	if !path.IsAbs(workspaceDir) {
 		cwd, err := os.Getwd()

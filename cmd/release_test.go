@@ -108,3 +108,11 @@ func Test_Release_ShouldKeepNMostRecentReleases(t *testing.T) {
 	// the first release should be gone now
 	assert.NoDirExists(t, path.Join(workspacePath, releaseId1))
 }
+
+func Test_Release_ShouldNotAcceptKeepZeroReleases(t *testing.T) {
+	createOutputBuffer(RootCmd)
+	RootCmd.SetArgs([]string{"release", "-w", "workspace", "-k", "0", "-a", "foo.zip"})
+	// FIRE!
+	err := RootCmd.Execute()
+	assert.ErrorContains(t, err, "zero is not a valid value for --keep (-k) flag")
+}
