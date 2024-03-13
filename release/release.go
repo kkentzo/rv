@@ -1,14 +1,12 @@
 package release
 
 import (
-	"archive/zip"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"time"
@@ -53,7 +51,7 @@ func Install(workspaceDir, bundlePath string, keepN uint, stdout io.Writer) (str
 		return "", fmt.Errorf("failed to create release: %v", err)
 	}
 	// decompress bundle file
-	if err := decompressZip(bundlePath, releaseDir); err != nil {
+	if err := decompressArchive(bundlePath, releaseDir); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
 		return "", fmt.Errorf("failed to decompress archive: %v", err)
@@ -148,44 +146,4 @@ func createOrUpdateLink(workspaceDir, target string) error {
 	}
 	// TODO: what if the following fails? We are stuck with no `current` link
 	return os.Symlink(target, link)
-}
-
-func decompressZip(zipFile, targetDir string) error {
-	// Open the zip archive for reading
-	r, err := zip.OpenReader(zipFile)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	// Iterate through each file in the archive
-	for _, file := range r.File {
-		// Open the file inside the zip archive
-		rc, err := file.Open()
-		if err != nil {
-			return err
-		}
-		defer rc.Close()
-
-		// Create the corresponding file in the target directory
-		targetFilePath := filepath.Join(targetDir, file.Name)
-		if file.FileInfo().IsDir() {
-			// Create directories if file is a directory
-			os.MkdirAll(targetFilePath, file.Mode())
-		} else {
-			// Create the file if it doesn't exist
-			targetFile, err := os.OpenFile(targetFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
-			if err != nil {
-				return err
-			}
-			defer targetFile.Close()
-
-			// Copy contents from the file inside the zip archive to the target file
-			if _, err := io.Copy(targetFile, rc); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
 }
