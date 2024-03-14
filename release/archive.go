@@ -97,7 +97,7 @@ func decompressTarGzip(gzipFile, targetDir string) error {
 				return fmt.Errorf("failed to create directory %s: %v", filePath, err)
 			}
 		case tar.TypeReg:
-			outFile, err := os.Create(filePath)
+			outFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
 			if err != nil {
 				return fmt.Errorf("failed to create file %s: %v", filePath, err)
 			}
