@@ -32,35 +32,25 @@ func decompressZip(zipFile, targetDir string, uid, gid int) error {
 	defer r.Close()
 
 	// Iterate through each file in the archive
-	for _, file := range r.File {
+	for _, f := range r.File {
 		// Open the file inside the zip archive
-		rc, err := file.Open()
+		rc, err := f.Open()
 		if err != nil {
 			return err
 		}
 
 		// Create the corresponding file in the target directory
-		targetFilePath := filepath.Join(targetDir, file.Name)
-		if file.FileInfo().IsDir() {
+		targetFilePath := filepath.Join(targetDir, f.Name)
+		if f.FileInfo().IsDir() {
 			// Create directories if file is a directory
-			if err := createDirectory(targetFilePath, file.Mode(), uid, gid); err != nil {
+			if err := createDirectory(targetFilePath, f.Mode(), uid, gid); err != nil {
 				// close file
 				rc.Close()
 				return err
 			}
 		} else {
 			// Create the file if it doesn't exist
-			targetFile, err := createFile(targetFilePath, file.Mode(), uid, gid)
-			if err != nil {
-				rc.Close()
-				return err
-			}
-
-			// Copy contents from the file inside the zip archive to the target file
-			_, err = io.Copy(targetFile, rc)
-			// close files
-			targetFile.Close()
-			if err != nil {
+			if err := createFileCopy(rc, targetFilePath, f.Mode(), uid, gid); err != nil {
 				rc.Close()
 				return err
 			}
@@ -105,14 +95,9 @@ func decompressTarGzip(gzipFile, targetDir string, uid, gid int) error {
 				return fmt.Errorf("failed to create directory %s: %v", filePath, err)
 			}
 		case tar.TypeReg:
-			outFile, err := createFile(filePath, os.FileMode(header.Mode), uid, gid)
-			if err != nil {
+			if err := createFileCopy(tarReader, filePath, os.FileMode(header.Mode), uid, gid); err != nil {
 				return fmt.Errorf("failed to create file %s: %v", filePath, err)
 			}
-			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return fmt.Errorf("failed to create file %s: %v", filePath, err)
-			}
-			outFile.Close()
 
 		default:
 			return fmt.Errorf("unsupported file type: file=%s type=%d", header.Name, header.Typeflag)
@@ -123,17 +108,22 @@ func decompressTarGzip(gzipFile, targetDir string, uid, gid int) error {
 	return nil
 }
 
-func createFile(path string, mode os.FileMode, uid, gid int) (f *os.File, err error) {
-	f, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
+// 1. create the `target` file
+// 2. copy the contents of `src` to `target`
+// 3. set the uid and gid of the target file
+func createFileCopy(src io.Reader, target string, mode os.FileMode, uid, gid int) error {
+	f, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
-		return
+		return err
 	}
-	if err = os.Chown(path, uid, gid); err != nil {
-		f.Close()
-		f = nil
-		return
+	defer f.Close()
+	if err := os.Chown(target, uid, gid); err != nil {
+		return err
 	}
-	return
+	if _, err := io.Copy(f, src); err != nil {
+		return err
+	}
+	return nil
 }
 
 func createDirectory(path string, mode os.FileMode, uid, gid int) error {
