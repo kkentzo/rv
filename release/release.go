@@ -50,20 +50,22 @@ func Install(workspaceDir, bundlePath string, keepN uint, stdout io.Writer) (str
 	if err := os.MkdirAll(releaseDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create release: %v", err)
 	}
+	fmt.Fprintf(stdout, "[info] release=%s\n", id)
 	// decompress bundle file
+	fmt.Fprintf(stdout, "[release] unpacking bundle=%s to %s\n", bundlePath, releaseDir)
 	if err := decompressArchive(bundlePath, releaseDir); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
 		return "", fmt.Errorf("failed to decompress archive: %v", err)
 	}
-	fmt.Fprintf(stdout, "[info] bundle=%s\n", bundlePath)
+
 	// update current link
+	fmt.Fprintf(stdout, "[release] updating current to %s\n", id)
 	if err := createOrUpdateLink(workspaceDir, id); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
 		return "", fmt.Errorf("failed to create/update link: %v", err)
 	}
-	fmt.Fprintf(stdout, "[release] current=%s\n", id)
 	// clean up excess releases
 	if err := cleanupReleases(workspaceDir, keepN, stdout); err != nil {
 		return id, fmt.Errorf("failed to clean up releases (keep=%d)", keepN)
@@ -109,10 +111,10 @@ func cleanupReleases(workspaceDir string, keepN uint, stdout io.Writer) error {
 		for idx, releaseName := range releases {
 			if idx < obsoleteN {
 				releasePath := path.Join(workspaceDir, releaseName)
+				fmt.Fprintf(stdout, "[cleanup] deleting %s (keep=%d)\n", releaseName, keepN)
 				if err := os.RemoveAll(releasePath); err != nil {
 					return fmt.Errorf("failed to delete release %s: %v", releasePath, err)
 				}
-				fmt.Fprintf(stdout, "[cleanup] deleted %s (keep=%d)\n", releaseName, keepN)
 			}
 		}
 	}

@@ -29,7 +29,7 @@ var (
 			if releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN, cmd.OutOrStdout()); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "[info] finished %s\n", releaseID)
+				fmt.Fprintf(cmd.OutOrStdout(), "[success] active version is %s\n", releaseID)
 			}
 		},
 	}

@@ -38,9 +38,10 @@ and will update the current link:
 ```bash
 $ rv release -w /opt/workspace -a /tmp/bundle.zip
 [info] workspace=/opt/workspace
-[info] bundle=/tmp/bundle.zip
-[release] current=20240313151207.365
-[info] finished 20240313151207.365
+[info] release=20240313151207.365
+[release] unpacking bundle=/tmp/bundle.zip to /opt/workspace/20240313151207.365
+[release] update current to 20240313151207.365
+[success] active version is 20240313151207.365
 
 $ ls -l /opt/workspace
 drwxr-xr-x 3 user group 4096 Mar 13 15:12 20240313151207.365
@@ -54,9 +55,10 @@ the new release:
 ```bash
 $ rv release -w /opt/workspace -a /tmp/bundle.zip
 [info] workspace=/opt/workspace
-[info] bundle=/tmp/bundle.zip
-[release] current=20240313151323.508
-[info] finished 20240313151323.508
+[info] release=20240313151323.508
+[release] unpacking bundle=/tmp/bundle.zip to /opt/workspace/20240313151323.508
+[release] update current to 20240313151323.508
+[success] active version is 20240313151323.508
 
 $ ls -l /opt/workspace
 drwxr-xr-x 3 user group 4096 Mar 13 15:12 20240313151207.365

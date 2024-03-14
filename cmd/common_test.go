@@ -6,10 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/kkentzo/rv/release"
 	"github.com/spf13/cobra"
 )
 
@@ -36,12 +36,12 @@ func createRelease(workspacePath, includedFile string, keepN uint) (string, erro
 }
 
 func parseReleaseFromOutput(out string) string {
-	s := regexp.MustCompile(`finished\ \b\d{14}\.\d{3}\b`).FindString(out)
-	tok := strings.Split(s, " ")
-	if len(tok) != 2 {
-		panic(fmt.Sprintf("could not parse release ID from '%s'", out))
+	for _, line := range strings.Split(out, "\n") {
+		if strings.HasPrefix(line, "[success]") {
+			return release.ReleaseFormatRe.FindString(line)
+		}
 	}
-	return tok[1]
+	return ""
 }
 
 func listReleases(workspacePath string) (string, error) {
