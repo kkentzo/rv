@@ -44,7 +44,9 @@ func decompressZip(zipFile, targetDir string) error {
 		targetFilePath := filepath.Join(targetDir, file.Name)
 		if file.FileInfo().IsDir() {
 			// Create directories if file is a directory
-			os.MkdirAll(targetFilePath, file.Mode())
+			if err := os.MkdirAll(targetFilePath, file.Mode()); err != nil {
+				return err
+			}
 		} else {
 			// Create the file if it doesn't exist
 			targetFile, err := os.OpenFile(targetFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
