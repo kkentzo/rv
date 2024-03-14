@@ -38,28 +38,36 @@ func decompressZip(zipFile, targetDir string) error {
 		if err != nil {
 			return err
 		}
-		defer rc.Close()
 
 		// Create the corresponding file in the target directory
 		targetFilePath := filepath.Join(targetDir, file.Name)
 		if file.FileInfo().IsDir() {
 			// Create directories if file is a directory
 			if err := os.MkdirAll(targetFilePath, file.Mode()); err != nil {
+				// close file
+				rc.Close()
 				return err
 			}
 		} else {
 			// Create the file if it doesn't exist
-			targetFile, err := os.OpenFile(targetFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+			targetFile, err := createFile(targetFilePath, file.Mode())
 			if err != nil {
+				rc.Close()
 				return err
 			}
-			defer targetFile.Close()
 
 			// Copy contents from the file inside the zip archive to the target file
-			if _, err := io.Copy(targetFile, rc); err != nil {
+			_, err = io.Copy(targetFile, rc)
+			// close files
+			targetFile.Close()
+			if err != nil {
+				rc.Close()
 				return err
 			}
 		}
+
+		// close the file in the archive
+		rc.Close()
 	}
 
 	return nil
@@ -93,11 +101,11 @@ func decompressTarGzip(gzipFile, targetDir string) error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.Mkdir(filePath, 0755); err != nil {
+			if err := os.Mkdir(filePath, os.FileMode(header.Mode)); err != nil {
 				return fmt.Errorf("failed to create directory %s: %v", filePath, err)
 			}
 		case tar.TypeReg:
-			outFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.FileMode(header.Mode))
+			outFile, err := createFile(filePath, os.FileMode(header.Mode))
 			if err != nil {
 				return fmt.Errorf("failed to create file %s: %v", filePath, err)
 			}
@@ -113,4 +121,8 @@ func decompressTarGzip(gzipFile, targetDir string) error {
 	}
 
 	return nil
+}
+
+func createFile(path string, mode os.FileMode) (*os.File, error) {
+	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 }
