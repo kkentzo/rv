@@ -27,7 +27,7 @@ var ReleaseFormatRe = regexp.MustCompile(`\b\d{14}\.\d{3}\b`)
 // 5. applies the policy of how many releases to keep
 // The function returns the ID of the release (directory name) and/or an error
 // if the ID is not an empty string, then the release directory still exists (even on error) and can be used
-func Install(workspaceDir, bundlePath string, keepN uint, stdout io.Writer) (string, error) {
+func Install(workspaceDir, bundlePath string, keepN uint, uid, gid int, stdout io.Writer) (string, error) {
 	// we should not accept this value because
 	// it will leave us with no releases at all
 	if keepN == 0 {
@@ -53,7 +53,7 @@ func Install(workspaceDir, bundlePath string, keepN uint, stdout io.Writer) (str
 	fmt.Fprintf(stdout, "[info] release=%s\n", id)
 	// decompress bundle file
 	fmt.Fprintf(stdout, "[release] unpacking bundle=%s to %s\n", bundlePath, releaseDir)
-	if err := decompressArchive(bundlePath, releaseDir); err != nil {
+	if err := decompressArchive(bundlePath, releaseDir, uid, gid); err != nil {
 		// cleanup release directory
 		defer os.RemoveAll(releaseDir)
 		return "", fmt.Errorf("failed to decompress archive: %v", err)
