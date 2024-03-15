@@ -20,6 +20,8 @@ workspace.
 
 ## Usage
 
+All commands and options can be inspected by using `rv help`.
+
 ### Release new version
 
 `rv` can be instructed to "release" a new version of the software
@@ -77,6 +79,31 @@ $ rv list -w /opt/workspace
 20240313151207.365
 ```
 
-## Rollback to an existing version
+## Rewind to an existing version
 
-TBD
+`rv` can be instructed to perform a rewind operation from the latest
+release to a previous target release. If no specific target is
+specified by the user, then the `current` link is set to the release
+that precedes the current one.
+
+The rewind operation will **delete** all releases that were performed
+after the target release so as to maintain the integrity of the
+cleanup operations.
+
+So, given:
+
+```bash
+$ rv list -w /opt/workspace
+20240313151323.508 <== current
+20240313151207.365
+```
+
+the rollback operation to the previous version can be achieved by:
+
+```bash
+$ rv rollback -w /opt/workspace
+[info] current=20240313151323.508
+[rewind] setting current to 20240313151207.365
+[cleanup] deleting 20240313151323.508
+[success] active version is 20240313151207.365
+```

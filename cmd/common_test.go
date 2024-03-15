@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kkentzo/rv/release"
@@ -32,6 +33,31 @@ func createRelease(workspacePath, includedFile string, keepN uint) (string, erro
 		return "", err
 	}
 
+	return cmdOutput.String(), nil
+}
+
+func createReleases(workspacePath string, n uint) ([]string, error) {
+	releases := []string{}
+	for i := 0; i < int(n); i++ {
+		out, err := createRelease(workspacePath, "foo", n)
+		if err != nil {
+			return releases, err
+		}
+		releases = append(releases, parseReleaseFromOutput(out))
+		time.Sleep(10 * time.Millisecond)
+	}
+	return releases, nil
+}
+
+func rewindRelease(workspacePath, target string) (string, error) {
+	// prepare command
+	cmdOutput := createOutputBuffer(RootCmd)
+	args := []string{"rewind", "-w", workspacePath, "-t", target}
+	RootCmd.SetArgs(args)
+	// FIRE!
+	if err := RootCmd.Execute(); err != nil {
+		return "", err
+	}
 	return cmdOutput.String(), nil
 }
 

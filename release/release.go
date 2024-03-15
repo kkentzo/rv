@@ -91,16 +91,67 @@ func Install(workspaceDir, bundlePath string, keepN uint, username, groupname st
 	return id, nil
 }
 
+func Rewind(workspaceDir, target string, stdout io.Writer) (string, error) {
+	releases, err := getReleasesDesc(workspaceDir)
+	if err != nil {
+		return target, err
+	}
+	// do we need to figure out which release to rewind to?
+	if target == "" {
+		switch len(releases) {
+		case 0:
+			return "", errors.New("can not rewind: no releases found in workspace")
+		case 1:
+			return "", errors.New("can not rewind having only one release in workspace")
+		default:
+			target = releases[1]
+		}
+	}
+
+	targetPath := path.Join(workspaceDir, target)
+	// does the target exist? => noop
+	if !fileExists(targetPath) {
+		return "", fmt.Errorf("release %s not found", target)
+	}
+	// figure out current link
+	current, err := GetCurrent(workspaceDir)
+	if err != nil {
+		return "", fmt.Errorf("could not determine current release: %v", err)
+	}
+	fmt.Fprintf(stdout, "[info] current=%s\n", current)
+
+	// is the target the same as the current link? => noop
+	if current == target {
+		return "", fmt.Errorf("will not rewind: target %s is already current", target)
+	}
+
+	// set the current link to the target release
+	fmt.Fprintf(stdout, "[rewind] setting current to %s\n", target)
+	if err := createOrUpdateLink(workspaceDir, target); err != nil {
+		return "", fmt.Errorf("failed to update link: %v", err)
+	}
+
+	// delete the releases that were performed later than the target release
+	for _, rel := range releases {
+		if rel == target {
+			break
+		}
+		releasePath := path.Join(workspaceDir, rel)
+		fmt.Fprintf(stdout, "[cleanup] deleting %s\n", rel)
+		if err := os.RemoveAll(releasePath); err != nil {
+			return target, fmt.Errorf("failed to delete release %s: %v", releasePath, err)
+		}
+	}
+
+	return target, nil
+}
+
 func List(workspaceDir string) ([]string, error) {
-	releases, err := getReleases(workspaceDir)
+	releases, err := getReleasesDesc(workspaceDir)
 	if err != nil {
 		return releases, fmt.Errorf("failed to list releases: %v", err)
 	}
-	// sort releases in descending order (oldest to newest)
-	sort.Slice(releases, func(i, j int) bool {
-		return releases[i] > releases[j]
-	})
-	current, err := os.Readlink(path.Join(workspaceDir, "current"))
+	current, err := os.Readlink(path.Join(workspaceDir, CurrentLinkName))
 	if err != nil {
 		return releases, fmt.Errorf("failed to resolve current release: %v", err)
 	}
@@ -115,17 +166,13 @@ func List(workspaceDir string) ([]string, error) {
 }
 
 func cleanupReleases(workspaceDir string, keepN uint, stdout io.Writer) error {
-	releases, err := getReleases(workspaceDir)
+	releases, err := getReleasesAsc(workspaceDir)
 	if err != nil {
 		return err
 	}
 	// assemble all release file names (and only those)
 	obsoleteN := len(releases) - int(keepN)
 	if obsoleteN > 0 {
-		// sort releases in ascending order (oldest to newest)
-		sort.Slice(releases, func(i, j int) bool {
-			return releases[i] < releases[j]
-		})
 		for idx, releaseName := range releases {
 			if idx < obsoleteN {
 				releasePath := path.Join(workspaceDir, releaseName)
@@ -138,6 +185,28 @@ func cleanupReleases(workspaceDir string, keepN uint, stdout io.Writer) error {
 	}
 
 	return nil
+}
+
+func getReleasesAsc(workspaceDir string) ([]string, error) {
+	releases, err := getReleases(workspaceDir)
+	if err != nil {
+		return []string{}, err
+	}
+	sort.Slice(releases, func(i, j int) bool {
+		return releases[i] < releases[j]
+	})
+	return releases, nil
+}
+
+func getReleasesDesc(workspaceDir string) ([]string, error) {
+	releases, err := getReleases(workspaceDir)
+	if err != nil {
+		return []string{}, err
+	}
+	sort.Slice(releases, func(i, j int) bool {
+		return releases[i] > releases[j]
+	})
+	return releases, nil
 }
 
 func getReleases(workspaceDir string) ([]string, error) {
@@ -204,4 +273,17 @@ func resolveGroup(groupname string) (gid int, err error) {
 		return
 	}
 	return
+}
+
+func fileExists(filename string) bool {
+	_, err := os.Stat(filename)
+	return err == nil || !os.IsNotExist(err)
+}
+
+func GetCurrent(workspace string) (string, error) {
+	target, err := os.Readlink(path.Join(workspace, CurrentLinkName))
+	if err != nil {
+		return "", err
+	}
+	return target, nil
 }
