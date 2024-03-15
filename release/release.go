@@ -6,9 +6,11 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/user"
 	"path"
 	"regexp"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -19,15 +21,19 @@ const (
 
 var ReleaseFormatRe = regexp.MustCompile(`\b\d{14}\.\d{3}\b`)
 
-// Execute the release flow given a workspace directory and a zip file (bundle):
-// 1. creates the workspace if necessary
-// 2. creates the release directory inside the workspace
-// 3. decompresses the bundle into the release directory
-// 4. updates the workspace's `current` link to point to the new release
-// 5. applies the policy of how many releases to keep
+// Execute the release flow given a workspace directory and a zip file (bundle)
+// If the username is empty, then the current user/group is used
+// Steps:
+// 1. create the workspace if necessary
+// 2. resolve the uid and gid of the files to be created
+// 3. create the release directory inside the workspace
+// 4. decompress the bundle into the release directory
+// 5. update the workspace's `current` link to point to the new release
+// 6. apply the policy of how many releases to keep
+//
 // The function returns the ID of the release (directory name) and/or an error
 // if the ID is not an empty string, then the release directory still exists (even on error) and can be used
-func Install(workspaceDir, bundlePath string, keepN uint, uid, gid int, stdout io.Writer) (string, error) {
+func Install(workspaceDir, bundlePath string, keepN uint, username, groupname string, stdout io.Writer) (string, error) {
 	// we should not accept this value because
 	// it will leave us with no releases at all
 	if keepN == 0 {
@@ -43,6 +49,18 @@ func Install(workspaceDir, bundlePath string, keepN uint, uid, gid int, stdout i
 
 	}
 	fmt.Fprintf(stdout, "[info] workspace=%s\n", workspaceDir)
+
+	// figure out file/directory ownership
+	uid, gid, err := resolveUser(username)
+	if err != nil {
+		return "", fmt.Errorf("failed to resolve user: %v", err)
+	}
+	if groupname != "" {
+		gid, err = resolveGroup(groupname)
+		if err != nil {
+			return "", fmt.Errorf("failed to resolve group: %v", err)
+		}
+	}
 
 	// create release under workspace
 	id := time.Now().Format(ReleaseFormat)
@@ -148,4 +166,42 @@ func createOrUpdateLink(workspaceDir, target string) error {
 	}
 	// TODO: what if the following fails? We are stuck with no `current` link
 	return os.Symlink(target, link)
+}
+
+// return the uid and gid of the requested user
+// if the username is empty,
+// then the function returns the uid and gid of the current user
+func resolveUser(username string) (uid int, gid int, err error) {
+	var u *user.User
+	if username == "" {
+		u, err = user.Current()
+	} else {
+		u, err = user.Lookup(username)
+	}
+	if err != nil {
+		return
+	}
+	uid, err = strconv.Atoi(u.Uid)
+	if err != nil {
+		return
+	}
+	gid, err = strconv.Atoi(u.Gid)
+	if err != nil {
+		return
+	}
+	return
+}
+
+// return the gid of the requested group
+func resolveGroup(groupname string) (gid int, err error) {
+	var g *user.Group
+	g, err = user.LookupGroup(groupname)
+	if err != nil {
+		return
+	}
+	gid, err = strconv.Atoi(g.Gid)
+	if err != nil {
+		return
+	}
+	return
 }

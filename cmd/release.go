@@ -3,8 +3,6 @@ package cmd
 import (
 	"errors"
 	"fmt"
-	"os/user"
-	"strconv"
 
 	"github.com/kkentzo/rv/release"
 	"github.com/spf13/cobra"
@@ -29,21 +27,9 @@ var (
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
-			// figure out file ownership
-			uid, gid, err := resolveUser(username)
-			if err != nil {
-				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
-				return
-			}
-			if groupname != "" {
-				gid, err = resolveGroup(groupname)
-				if err != nil {
-					fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
-					return
-				}
-			}
 			// perform release
-			if releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN, uid, gid, cmd.OutOrStdout()); err != nil {
+			releaseID, err := release.Install(globalWorkspacePath, archivePath, keepN, username, groupname, cmd.OutOrStdout())
+			if err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
 				fmt.Fprintf(cmd.OutOrStdout(), "[success] active version is %s\n", releaseID)
@@ -51,40 +37,6 @@ var (
 		},
 	}
 )
-
-func resolveUser(username string) (uid int, gid int, err error) {
-	var u *user.User
-	if username == "" {
-		u, err = user.Current()
-	} else {
-		u, err = user.Lookup(username)
-	}
-	if err != nil {
-		return
-	}
-	uid, err = strconv.Atoi(u.Uid)
-	if err != nil {
-		return
-	}
-	gid, err = strconv.Atoi(u.Gid)
-	if err != nil {
-		return
-	}
-	return
-}
-
-func resolveGroup(groupname string) (gid int, err error) {
-	var g *user.Group
-	g, err = user.LookupGroup(groupname)
-	if err != nil {
-		return
-	}
-	gid, err = strconv.Atoi(g.Gid)
-	if err != nil {
-		return
-	}
-	return
-}
 
 func init() {
 	requireWorkspaceFlag(ReleaseCmd)
