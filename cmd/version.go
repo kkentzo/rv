@@ -12,19 +12,15 @@ var (
 	AppVersion string
 )
 
-var (
+func VersionCommand() *cobra.Command {
 	// command
-	versionCmdDescription = "list all the releases in the workspace"
-	VersionCmd            = &cobra.Command{
+	descr := "list all the releases in the workspace"
+	return &cobra.Command{
 		Use:   "version",
-		Short: versionCmdDescription,
-		Long:  versionCmdDescription,
+		Short: descr,
+		Long:  descr,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Fprintf(cmd.OutOrStdout(), "%s [%s]\n", AppVersion, GitCommit)
 		},
 	}
-)
-
-func init() {
-	RootCmd.AddCommand(VersionCmd)
 }

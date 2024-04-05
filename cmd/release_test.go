@@ -46,9 +46,14 @@ func Test_Release_ShouldCleanUp_WhenBundleDoesNotExist(t *testing.T) {
 	bundlePath := fmt.Sprintf("%s.zip", uuid.NewString())
 
 	// prepare and execute command
-	RootCmd.SetArgs([]string{"release", "-w", workspacePath, bundlePath})
+	cmd := New()
+	cmd.SetArgs([]string{"release", "-w", workspacePath, "-a", bundlePath})
+	out := createOutputBuffer(cmd)
 	// FIRE!
-	require.NoError(t, RootCmd.Execute())
+	require.NoError(t, cmd.Execute())
+
+	// check that the output contains the relevant message
+	assert.Contains(t, out.String(), "no such file or directory")
 
 	// the workspace will not be cleared up
 	assert.DirExists(t, workspacePath)
@@ -110,9 +115,10 @@ func Test_Release_ShouldKeepNMostRecentReleases(t *testing.T) {
 }
 
 func Test_Release_ShouldNotAcceptKeepZeroReleases(t *testing.T) {
-	createOutputBuffer(RootCmd)
-	RootCmd.SetArgs([]string{"release", "-w", "workspace", "-k", "0", "-a", "foo.zip"})
+	cmd := New()
+	createOutputBuffer(cmd)
+	cmd.SetArgs([]string{"release", "-w", "workspace", "-k", "0", "-a", "foo.zip"})
 	// FIRE!
-	err := RootCmd.Execute()
+	err := cmd.Execute()
 	assert.ErrorContains(t, err, "zero is not a valid value for --keep (-k) flag")
 }

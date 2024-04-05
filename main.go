@@ -1,7 +1,14 @@
 package main
 
-import "github.com/kkentzo/rv/cmd"
+import (
+	"os"
+
+	"github.com/kkentzo/rv/cmd"
+)
 
 func main() {
-	cmd.Execute()
+	root := cmd.New()
+	if err := root.Execute(); err != nil {
+		os.Exit(1)
+	}
 }

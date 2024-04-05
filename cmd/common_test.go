@@ -26,10 +26,11 @@ func createRelease(workspacePath, includedFile string, keepN uint) (string, erro
 	}
 
 	// prepare command
-	cmdOutput := createOutputBuffer(RootCmd)
-	RootCmd.SetArgs([]string{"release", "-w", workspacePath, "-k", fmt.Sprint(keepN), "-a", bundlePath})
+	cmd := New()
+	cmdOutput := createOutputBuffer(cmd)
+	cmd.SetArgs([]string{"release", "-w", workspacePath, "-k", fmt.Sprint(keepN), "-a", bundlePath})
 	// FIRE!
-	if err := RootCmd.Execute(); err != nil {
+	if err := cmd.Execute(); err != nil {
 		return "", err
 	}
 
@@ -51,11 +52,12 @@ func createReleases(workspacePath string, n uint) ([]string, error) {
 
 func rewindRelease(workspacePath, target string) (string, error) {
 	// prepare command
-	cmdOutput := createOutputBuffer(RootCmd)
+	cmd := New()
+	cmdOutput := createOutputBuffer(cmd)
 	args := []string{"rewind", "-w", workspacePath, "-t", target}
-	RootCmd.SetArgs(args)
+	cmd.SetArgs(args)
 	// FIRE!
-	if err := RootCmd.Execute(); err != nil {
+	if err := cmd.Execute(); err != nil {
 		return "", err
 	}
 	return cmdOutput.String(), nil
@@ -72,10 +74,11 @@ func parseReleaseFromOutput(out string) string {
 
 func listReleases(workspacePath string) (string, error) {
 	// prepare command
-	cmdOutput := createOutputBuffer(RootCmd)
-	RootCmd.SetArgs([]string{"list", "-w", workspacePath})
+	cmd := New()
+	cmdOutput := createOutputBuffer(cmd)
+	cmd.SetArgs([]string{"list", "-w", workspacePath})
 	// FIRE!
-	if err := RootCmd.Execute(); err != nil {
+	if err := cmd.Execute(); err != nil {
 		return "", err
 	}
 

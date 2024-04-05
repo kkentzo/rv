@@ -7,15 +7,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	// command
-	listCmdDescription = "list all the releases in the workspace"
-	ListCmd            = &cobra.Command{
+func ListCommand(globals *GlobalVariables) *cobra.Command {
+	descr := "list all the releases in the workspace"
+	cmd := &cobra.Command{
 		Use:   "list",
-		Short: listCmdDescription,
-		Long:  listCmdDescription,
+		Short: descr,
+		Long:  descr,
 		Run: func(cmd *cobra.Command, args []string) {
-			if releases, err := release.List(globalWorkspacePath); err != nil {
+			if releases, err := release.List(globals.WorkspacePath); err != nil {
 				fmt.Fprintf(cmd.OutOrStderr(), "error: %v\n", err)
 			} else {
 				for _, rel := range releases {
@@ -24,9 +23,6 @@ var (
 			}
 		},
 	}
-)
 
-func init() {
-	requireWorkspaceFlag(ListCmd)
-	RootCmd.AddCommand(ListCmd)
+	return requireGlobalFlags(cmd, globals)
 }
