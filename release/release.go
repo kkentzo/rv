@@ -128,7 +128,7 @@ func Rewind(workspaceDir, target string, stdout io.Writer) (string, error) {
 	// set the current link to the target release
 	fmt.Fprintf(stdout, "[rewind] setting current to %s\n", target)
 	if err := createOrUpdateLink(workspaceDir, target); err != nil {
-		return "", fmt.Errorf("failed to update link: %v", err)
+		return "", fmt.Errorf("current link: %v", err)
 	}
 
 	// delete the releases that were performed later than the target release
@@ -231,10 +231,15 @@ func createOrUpdateLink(workspaceDir, target string) error {
 	// does the link already exist?
 	_, err := os.Stat(link)
 	if !os.IsNotExist(err) {
-		os.Remove(link)
+		if err := os.Remove(link); err != nil {
+			return fmt.Errorf("update failed: %v", err)
+		}
 	}
 	// TODO: what if the following fails? We are stuck with no `current` link
-	return os.Symlink(target, link)
+	if err := os.Symlink(target, link); err != nil {
+		return fmt.Errorf("create failed: %v", err)
+	}
+	return nil
 }
 
 // return the uid and gid of the requested user
